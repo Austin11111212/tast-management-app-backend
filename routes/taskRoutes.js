@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose'); // Add mongoose import
 const Task = require('../models/Task');
 const authenticate = require('../middleware/authMiddleware');
 
@@ -6,7 +7,7 @@ const router = express.Router();
 
 // Create a new task
 router.post('/', authenticate, async (req, res) => {
-    const { title, description, deadline, status } = req.body;
+    const { title, description, deadline, status, priority } = req.body;
 
     try {
         const task = await Task.create({
@@ -15,6 +16,7 @@ router.post('/', authenticate, async (req, res) => {
             description,
             deadline,
             status,
+            priority, // Include priority in task creation
         });
 
         res.status(201).json(task);
@@ -37,10 +39,16 @@ router.get('/', authenticate, async (req, res) => {
 
 // Update a task
 router.put('/:id', authenticate, async (req, res) => {
-    const { title, description, deadline, status } = req.body;
+    const { title, description, deadline, status, priority } = req.body;
+    const { id } = req.params;
 
     try {
-        const task = await Task.findById(req.params.id);
+        // Ensure ID is a valid ObjectId
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid task ID' });
+        }
+
+        const task = await Task.findById(id);
 
         if (!task) {
             return res.status(404).json({ message: 'Task not found' });
@@ -51,10 +59,12 @@ router.put('/:id', authenticate, async (req, res) => {
             return res.status(403).json({ message: 'Unauthorized action' });
         }
 
+        // Update task fields only if they're provided
         task.title = title || task.title;
         task.description = description || task.description;
         task.deadline = deadline || task.deadline;
         task.status = status || task.status;
+        task.priority = priority || task.priority;
 
         const updatedTask = await task.save();
         res.status(200).json(updatedTask);
@@ -66,8 +76,15 @@ router.put('/:id', authenticate, async (req, res) => {
 
 // Delete a task
 router.delete('/:id', authenticate, async (req, res) => {
+    const { id } = req.params;
+
     try {
-        const task = await Task.findById(req.params.id);
+        // Ensure ID is a valid ObjectId
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid task ID' });
+        }
+
+        const task = await Task.findById(id);
 
         if (!task) {
             return res.status(404).json({ message: 'Task not found' });
@@ -78,7 +95,7 @@ router.delete('/:id', authenticate, async (req, res) => {
             return res.status(403).json({ message: 'Unauthorized action' });
         }
 
-        await Task.findByIdAndDelete(req.params.id);
+        await Task.findByIdAndDelete(id);
         res.status(204).send(); // Successfully deleted, no content to return
     } catch (error) {
         console.error('Error deleting task:', error.message);
