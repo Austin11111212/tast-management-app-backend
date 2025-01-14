@@ -2,7 +2,6 @@ const express = require('express');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const userRoutes = require('./routes/userRoutes');
-const authRoutes = require('./routes/authRoutes'); // Import the new authRoutes
 const taskRoutes = require('./routes/taskRoutes');
 const cors = require('cors');
 const authenticate = require('./middleware/authMiddleware');
@@ -17,8 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use('/api/auth', userRoutes);
-app.use('/api/auth', authRoutes); // Use the authRoutes here
+app.use('/api/users', userRoutes);
 app.use('/api/tasks', authenticate, taskRoutes);
 
 // Start the server

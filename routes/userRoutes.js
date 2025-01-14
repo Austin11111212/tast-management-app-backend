@@ -1,7 +1,7 @@
 const express = require('express');
-const bcrypt = require('bcryptjs'); // To hash passwords and compare them
-const User = require('../models/User');
-const generateToken = require('../utils/generateToken'); // Utility to generate token
+const bcrypt = require('bcryptjs'); // For password hashing and comparison
+const User = require('../models/User'); // User model
+const generateToken = require('../utils/generateToken'); // JWT generation utility
 const router = express.Router();
 
 // Register User
@@ -14,7 +14,7 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ message: 'Please provide name, email, and password' });
         }
 
-        // Check if user already exists
+        // Check if the user already exists
         const userExists = await User.findOne({ email });
         if (userExists) {
             return res.status(400).json({ message: 'User already exists' });
@@ -24,14 +24,14 @@ router.post('/register', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create and save the new user with hashed password
+        // Create and save the new user with the hashed password
         const user = await User.create({
             name,
             email,
-            password: hashedPassword, // Store the hashed password
+            password: hashedPassword, // Save hashed password
         });
 
-        // Return user data along with a JWT token
+        // Respond with user data and JWT
         res.status(201).json({
             _id: user._id,
             name: user.name,
@@ -44,7 +44,6 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Login User
 // Login User
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
@@ -61,23 +60,23 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
-        // Compare the plain text password
-        if (user.password !== password) {
+        // Compare the entered password with the hashed password
+        const isPasswordMatch = await bcrypt.compare(password, user.password);
+        if (!isPasswordMatch) {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
-        // Return user data along with a JWT token
+        // Respond with user data and JWT
         res.status(200).json({
             _id: user._id,
             name: user.name,
             email: user.email,
-            token: generateToken(user._id),
+            token: generateToken(user._id), // Generate JWT token
         });
     } catch (error) {
         console.error('Login error:', error.message);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
-
 
 module.exports = router;
