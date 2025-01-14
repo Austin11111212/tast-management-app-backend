@@ -1,5 +1,5 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs'); // To hash passwords and compare them
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken'); // Utility to generate token
 const router = express.Router();
@@ -7,44 +7,52 @@ const router = express.Router();
 // Register User
 router.post('/register', async (req, res) => {
     const { name, email, password } = req.body;
+
     try {
-        // Validate that all fields are present
+        // Validate input
         if (!name || !email || !password) {
-            return res.status(400).json({ message: 'Please provide all fields: name, email, and password' });
+            return res.status(400).json({ message: 'Please provide name, email, and password' });
         }
 
-        // Check if the user already exists
+        // Check if user already exists
         const userExists = await User.findOne({ email });
         if (userExists) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        // Create and save the new user
+        // Hash the password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // Create and save the new user with hashed password
         const user = await User.create({
             name,
             email,
-            password, // Store password as plain text
+            password: hashedPassword, // Store the hashed password
         });
 
-        // Return the user data along with a JWT token
+        // Return user data along with a JWT token
         res.status(201).json({
             _id: user._id,
             name: user.name,
             email: user.email,
-            token: generateToken(user._id),
+            token: generateToken(user._id), // Generate JWT token
         });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Registration error:', error.message);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 });
 
 // Login User
+// Login User
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
+
     try {
-        // Validate that email and password are provided
+        // Validate input
         if (!email || !password) {
-            return res.status(400).json({ message: 'Please provide both email and password' });
+            return res.status(400).json({ message: 'Please provide email and password' });
         }
 
         // Check if user exists
@@ -53,20 +61,23 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
-        // Compare the plaintext password directly
-        if (user.password === password) {
-            res.status(200).json({
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                token: generateToken(user._id),
-            });
-        } else {
+        // Compare the plain text password
+        if (user.password !== password) {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
+
+        // Return user data along with a JWT token
+        res.status(200).json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            token: generateToken(user._id),
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Login error:', error.message);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 });
+
 
 module.exports = router;

@@ -1,38 +1,44 @@
 const express = require('express');
 const Task = require('../models/Task');
-const { protect } = require('../middleware/authMiddleware');
+const authenticate = require('../middleware/authMiddleware');
+
 const router = express.Router();
 
-// Create a task
-router.post('/', protect, async (req, res) => {
+// Create a new task
+router.post('/', authenticate, async (req, res) => {
     const { title, description, deadline, status } = req.body;
+
     try {
-        const task = await Task.create({ 
-            user: req.user.id, 
-            title, 
-            description, 
-            deadline, 
-            status 
+        const task = await Task.create({
+            user: req.user.id, // Use authenticated user ID
+            title,
+            description,
+            deadline,
+            status,
         });
+
         res.status(201).json(task);
     } catch (error) {
+        console.error('Error creating task:', error.message);
         res.status(500).json({ message: error.message });
     }
 });
 
-// Get all tasks for the authenticated user
-router.get('/', protect, async (req, res) => {
+// Get all tasks for authenticated user
+router.get('/', authenticate, async (req, res) => {
     try {
-        const tasks = await Task.find({ user: req.user.id });
+        const tasks = await Task.find({ user: req.user.id }); // Filter by user ID
         res.status(200).json(tasks);
     } catch (error) {
+        console.error('Error fetching tasks:', error.message);
         res.status(500).json({ message: error.message });
     }
 });
 
-// Update task status or other details
-router.put('/:id', protect, async (req, res) => {
+// Update a task
+router.put('/:id', authenticate, async (req, res) => {
     const { title, description, deadline, status } = req.body;
+
     try {
         const task = await Task.findById(req.params.id);
 
@@ -45,21 +51,21 @@ router.put('/:id', protect, async (req, res) => {
             return res.status(403).json({ message: 'Unauthorized action' });
         }
 
-        // Update the task with new details
         task.title = title || task.title;
         task.description = description || task.description;
         task.deadline = deadline || task.deadline;
         task.status = status || task.status;
 
-        await task.save();
-        res.status(200).json(task);
+        const updatedTask = await task.save();
+        res.status(200).json(updatedTask);
     } catch (error) {
+        console.error('Error updating task:', error.message);
         res.status(500).json({ message: error.message });
     }
 });
 
 // Delete a task
-router.delete('/:id', protect, async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
     try {
         const task = await Task.findById(req.params.id);
 
@@ -72,10 +78,10 @@ router.delete('/:id', protect, async (req, res) => {
             return res.status(403).json({ message: 'Unauthorized action' });
         }
 
-        // Use findByIdAndDelete instead of remove (recommended)
         await Task.findByIdAndDelete(req.params.id);
-        res.status(204).send(); // Successfully deleted the task, no content to return
+        res.status(204).send(); // Successfully deleted, no content to return
     } catch (error) {
+        console.error('Error deleting task:', error.message);
         res.status(500).json({ message: error.message });
     }
 });
