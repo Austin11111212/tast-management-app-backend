@@ -1,5 +1,5 @@
 const express = require('express');
-const mongoose = require('mongoose'); // Add mongoose import
+const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const authenticate = require('../middleware/authMiddleware');
 
@@ -10,13 +10,25 @@ router.post('/', authenticate, async (req, res) => {
     const { title, description, deadline, status, priority } = req.body;
 
     try {
+        // Check if status and priority are valid
+        const validStatuses = ['in progress', 'completed'];
+        const validPriorities = ['low', 'medium', 'high'];
+
+        if (status && !validStatuses.includes(status)) {
+            return res.status(400).json({ message: 'Invalid status value' });
+        }
+
+        if (priority && !validPriorities.includes(priority)) {
+            return res.status(400).json({ message: 'Invalid priority value' });
+        }
+
         const task = await Task.create({
             user: req.user.id, // Use authenticated user ID
             title,
             description,
             deadline,
             status,
-            priority, // Include priority in task creation
+            priority,  // Include priority field
         });
 
         res.status(201).json(task);
@@ -37,6 +49,32 @@ router.get('/', authenticate, async (req, res) => {
     }
 });
 
+// Get a specific task by ID
+router.get('/:id', authenticate, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid task ID' });
+        }
+
+        const task = await Task.findById(id);
+
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        if (task.user.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'Unauthorized action' });
+        }
+
+        res.status(200).json(task);
+    } catch (error) {
+        console.error('Error fetching task:', error.message);
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // Update a task
 router.put('/:id', authenticate, async (req, res) => {
     const { title, description, deadline, status, priority } = req.body;
@@ -46,6 +84,18 @@ router.put('/:id', authenticate, async (req, res) => {
         // Ensure ID is a valid ObjectId
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ message: 'Invalid task ID' });
+        }
+
+        // Validate status and priority
+        const validStatuses = ['in progress', 'completed'];
+        const validPriorities = ['low', 'medium', 'high'];
+
+        if (status && !validStatuses.includes(status)) {
+            return res.status(400).json({ message: 'Invalid status value' });
+        }
+
+        if (priority && !validPriorities.includes(priority)) {
+            return res.status(400).json({ message: 'Invalid priority value' });
         }
 
         const task = await Task.findById(id);
