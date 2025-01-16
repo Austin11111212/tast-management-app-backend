@@ -14,10 +14,10 @@ connectDB();
 
 const app = express();
 
-// Define allowed origins for CORS
+// Define allowed origins for CORS (local and production URLs)
 const allowedOrigins = [
     'http://localhost:3000', // Local development (React app)
-    process.env.FRONTEND_URL, // Production (deployed frontend URL from environment variable)
+    process.env.FRONTEND_URL, // Production (frontend deployed URL from .env variable)
 ];
 
 // CORS Configuration
