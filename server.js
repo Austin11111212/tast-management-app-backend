@@ -14,21 +14,19 @@ connectDB();
 
 const app = express();
 
-// Define allowed origins for CORS (local and production URLs)
+// Define allowed origins for CORS
 const allowedOrigins = [
     'http://localhost:3000', // Local development (React app)
-    process.env.FRONTEND_URL, // Production (Vercel app URL from environment variable)
+    process.env.FRONTEND_URL, // Production (deployed frontend URL from environment variable)
 ];
 
 // CORS Configuration
 const corsOptions = {
-    origin: function (origin, callback) {
-        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-            // Allow the request if it's from an allowed origin
-            callback(null, true);
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true); // Allow the request if the origin is valid
         } else {
-            // Reject the request if it's from an origin not allowed
-            callback(new Error('Not allowed by CORS'));
+            callback(new Error('Not allowed by CORS')); // Block requests from invalid origins
         }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
@@ -36,12 +34,12 @@ const corsOptions = {
 };
 
 // Middleware
-app.use(cors(corsOptions)); // Apply CORS configuration globally
+app.use(cors(corsOptions)); // Apply CORS globally
 app.use(express.json()); // Parse incoming JSON requests
 
 // Routes
 app.use('/api/users', userRoutes); // User routes
-app.use('/api/tasks', authenticate, taskRoutes); // Task routes protected by authentication
+app.use('/api/tasks', authenticate, taskRoutes); // Task routes (protected)
 
 // Start the server
 const PORT = process.env.PORT || 5000;
